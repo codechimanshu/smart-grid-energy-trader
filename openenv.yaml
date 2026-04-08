@@ -1,0 +1,9 @@
+name: smart-grid
+task: energy-trade
+version: "1.0.0"
+description: "A reinforcement learning environment for managing a village microgrid, balancing solar/wind generation, battery storage, and grid trading."
+dependencies:
+  - gymnasium==0.29.1
+  - numpy==1.26.4
+  - openai==1.14.0
+  
