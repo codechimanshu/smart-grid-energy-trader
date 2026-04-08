@@ -3,19 +3,17 @@ import random
 from openai import OpenAI
 from env import SmartGridEnv
 
-# The hackathon evaluator passes these environment variables
 API_BASE_URL = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
-MODEL_NAME = os.getenv("MODEL_NAME", "gpt-3.5-turbo") # Default fallback
+MODEL_NAME = os.getenv("MODEL_NAME", "gpt-3.5-turbo")
 HF_TOKEN = os.getenv("HF_TOKEN")
-# Setup OpenAI Client
+
 client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN) if HF_TOKEN else None
 
 def get_action_from_llm(obs):
-    # If no token is provided during local testing, use a random fallback to test the loop
     if not client:
         return str(random.choice([0, 1, 2]))
         
-    prompt = f"You manage a grid. Current State: Solar Gen={obs[0]:.1f}kW, Battery={obs[1]:.1f}%, Demand={obs[2]:.1f}kW, Grid Price=${obs[3]:.1f}. Choose action: 0 (Village), 1 (Sell), or 2 (Store). Reply with ONLY the number 0, 1, or 2."
+    prompt = f"State: Gen={obs[0]:.1f}, Bat={obs[1]:.1f}, Dem={obs[2]:.1f}, Price={obs[3]:.1f}. Action: 0(Vill), 1(Sell), 2(Store). Reply with ONLY 0, 1, or 2."
     
     try:
         response = client.chat.completions.create(
@@ -24,20 +22,16 @@ def get_action_from_llm(obs):
             temperature=0.0,
             max_tokens=5
         )
-        # Extract just the number from the response
         action_text = response.choices[0].message.content.strip()
-        # Ensure it's a valid integer, fallback to 0 if LLM hallucinates
         return action_text if action_text in ['0', '1', '2'] else '0'
-    except Exception as e:
-        return '0' # Fallback action
+    except Exception:
+        return '0'
 
-def main():
-    env = SmartGridEnv()
-    obs, _ = env.reset()
+def run_single_task(env, task_name):
+    # Reset environment with specific scenario
+    obs, _ = env.reset(options={"task": task_name})
     
-    # REQUIRED FORMAT: START
-    print(f"[START] task=energy-trade env=smart-grid model={MODEL_NAME}")
-    
+    print(f"[START] task={task_name} env=smart-grid model={MODEL_NAME}")
     total_rewards = []
     
     while True:
@@ -47,15 +41,30 @@ def main():
         obs, reward, done, _, _ = env.step(action_int)
         total_rewards.append(reward)
         
-        # REQUIRED FORMAT: STEP
         print(f"[STEP] step={env.step_count} action={action_str} reward={reward:.2f} done={str(done).lower()} error=null")
         
         if done:
             break
             
-    # REQUIRED FORMAT: END
+    # Calculate a normalized score strictly between 0 and 1
+    total_sum = sum(total_rewards)
+    # Convert raw rewards (can range from -480 to +720) into a 0.0 to 1.0 scale
+    raw_score = (total_sum + 480) / 1200.0
+    # Force it to be strictly between 0.01 and 0.99
+    final_score = max(0.01, min(0.99, raw_score))
+    
     rewards_str = ",".join([f"{r:.2f}" for r in total_rewards])
-    print(f"[END] success=true steps={len(total_rewards)} rewards={rewards_str}")
+    # The crucial change: Adding score=... to the END string
+    print(f"[END] success=true steps={len(total_rewards)} rewards={rewards_str} score={final_score:.4f}")
+
+def main():
+    env = SmartGridEnv()
+    
+    # We must run exactly 3 or more tasks!
+    hackathon_tasks = ["summer-peak", "winter-storm", "mild-spring"]
+    
+    for task in hackathon_tasks:
+        run_single_task(env, task)
 
 if __name__ == "__main__":
     main()
