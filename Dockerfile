@@ -14,4 +14,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Run our custom server to handle the Hackathon's POST requests
-CMD ["python", "server.py"]
+CMD ["python", "-m", "server.app"]

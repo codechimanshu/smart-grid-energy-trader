@@ -6,8 +6,13 @@ build-backend = "setuptools.build_meta"
 name = "smart-grid"
 version = "1.0.0"
 description = "Smart Grid Energy Trader OpenEnv"
+requires-python = ">=3.10"
 dependencies = [
-    "gymnasium==0.29.1",
-    "numpy==1.26.4",
-    "openai==1.14.0"
+    "gymnasium",
+    "numpy",
+    "openai",
+    "openenv-core>=0.2.0"
 ]
+
+[project.scripts]
+server = "server.app:main"
