@@ -13,5 +13,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of your project files
 COPY . .
 
-# Keep the container running in the background for the hackathon evaluator
-CMD ["python", "-m", "http.server", "7860"]
+# Run our custom server to handle the Hackathon's POST requests
+CMD ["python", "server.py"]
