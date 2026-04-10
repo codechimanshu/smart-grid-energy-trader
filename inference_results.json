@@ -1,0 +1,27 @@
+{
+  "model": "gpt-4o-mini",
+  "results": [
+    {
+      "task_id": 1,
+      "name": "Single Decision",
+      "difficulty": "easy",
+      "score": 1.0,
+      "steps": 1
+    },
+    {
+      "task_id": 2,
+      "name": "24-Hour Day Manager",
+      "difficulty": "medium",
+      "score": 0.0,
+      "steps": 24
+    },
+    {
+      "task_id": 3,
+      "name": "7-Day Storm Survival",
+      "difficulty": "hard",
+      "score": 0.395,
+      "steps": 168
+    }
+  ],
+  "average_score": 0.465
+}
