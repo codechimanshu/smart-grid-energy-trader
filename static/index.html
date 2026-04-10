@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Smart Grid Energy Trader</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg:       #0a0e1a;
+    --panel:    #0f1525;
+    --border:   #1e2d4a;
+    --amber:    #f5a623;
+    --green:    #00e5a0; 
+    --red:      #ff4757;
+    --blue:     #4a9eff;
+    --purple:   #8b5cf6;
+    --text:     #e8edf5;
+    --muted:    #4a5568;
+    --mono:     'Space Mono', monospace;
+    --sans:     'Syne', sans-serif;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── grid bg ── */
+  body::before {
+    content:'';
+    position:fixed; inset:0;
+    background-image:
+      linear-gradient(rgba(74,158,255,.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(74,158,255,.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events:none; z-index:0;
+  }
+
+  .wrap { position:relative; z-index:1; max-width:1200px; margin:0 auto; padding:24px; }
+
+  /* ── header ── */
+  header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 20px 0 32px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 28px;
+  }
+  .logo { display:flex; align-items:center; gap:14px; }
+  .logo-icon {
+    width:44px; height:44px; border-radius:10px;
+    background: linear-gradient(135deg, #f5a623, #ff6b35);
+    display:flex; align-items:center; justify-content:center;
+    font-size:20px;
+  }
+  .logo-text h1 { font-size:20px; font-weight:800; letter-spacing:-.5px; }
+  .logo-text p  { font-size:11px; color:var(--muted); font-family:var(--mono); margin-top:2px; }
+  .status-pill {
+    display:flex; align-items:center; gap:8px;
+    background:var(--panel); border:1px solid var(--border);
+    border-radius:20px; padding:8px 16px;
+    font-family:var(--mono); font-size:12px;
+  }
+  .dot {
+    width:8px; height:8px; border-radius:50%;
+    background:var(--muted); transition:.3s;
+  }
+  .dot.live { background:var(--green); box-shadow:0 0 8px var(--green); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+
+  /* ── metric cards row ── */
+  .metrics {
+    display:grid; grid-template-columns:repeat(4,1fr); gap:14px;
+    margin-bottom:24px;
+  }
+  .metric {
+    background:var(--panel); border:1px solid var(--border);
+    border-radius:12px; padding:18px 20px;
+    transition:.2s;
+  }
+  .metric:hover { border-color:var(--blue); transform:translateY(-2px); }
+  .metric-label { font-family:var(--mono); font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; }
+  .metric-value { font-size:28px; font-weight:800; line-height:1; }
+  .metric-sub   { font-family:var(--mono); font-size:11px; color:var(--muted); margin-top:6px; }
+  .amber { color:var(--amber); }
+  .green { color:var(--green); }
+  .blue  { color:var(--blue);  }
+  .red   { color:var(--red);   }
+  .purple{ color:var(--purple);}
+
+  /* ── main grid ── */
+  .main-grid {
+    display:grid; grid-template-columns:1fr 340px; gap:20px;
+    margin-bottom:20px;
+  }
+
+  /* ── panel base ── */
+  .panel {
+    background:var(--panel); border:1px solid var(--border);
+    border-radius:14px; padding:22px;
+  }
+  .panel-title {
+    font-family:var(--mono); font-size:11px; color:var(--muted);
+    text-transform:uppercase; letter-spacing:1.5px;
+    margin-bottom:18px; display:flex; align-items:center; gap:8px;
+  }
+  .panel-title::before {
+    content:''; width:3px; height:14px; border-radius:2px;
+    background:var(--blue);
+  }
+
+  /* ── battery visual ── */
+  .battery-wrap { display:flex; align-items:center; gap:20px; margin-bottom:20px; }
+  .battery-svg { flex-shrink:0; }
+  .battery-info { flex:1; }
+  .battery-pct  { font-size:48px; font-weight:800; line-height:1; }
+  .battery-label{ font-family:var(--mono); font-size:11px; color:var(--muted); margin-top:4px; }
+
+  /* ── action buttons ── */
+  .actions { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:18px; }
+  .action-btn {
+    border:1px solid var(--border); border-radius:10px;
+    padding:14px 10px; background:transparent;
+    cursor:pointer; transition:.2s; color:var(--text);
+    font-family:var(--sans); text-align:center;
+  }
+  .action-btn:hover { transform:translateY(-2px); }
+  .action-btn .btn-icon { font-size:22px; margin-bottom:6px; }
+  .action-btn .btn-name { font-size:13px; font-weight:600; }
+  .action-btn .btn-desc { font-family:var(--mono); font-size:9px; color:var(--muted); margin-top:3px; }
+  .action-btn.store  { border-color:#3b82f6; }
+  .action-btn.store:hover  { background:rgba(59,130,246,.1); }
+  .action-btn.dist   { border-color:#00e5a0; }
+  .action-btn.dist:hover   { background:rgba(0,229,160,.1); }
+  .action-btn.sell   { border-color:#f5a623; }
+  .action-btn.sell:hover   { background:rgba(245,166,35,.1); }
+  .action-btn.active-store  { background:rgba(59,130,246,.2);  border-color:#3b82f6; }
+  .action-btn.active-dist   { background:rgba(0,229,160,.2);   border-color:#00e5a0; }
+  .action-btn.active-sell   { background:rgba(245,166,35,.2);  border-color:#f5a623; }
+
+  /* ── state display ── */
+  .state-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .state-row {
+    background: rgba(255,255,255,.03); border-radius:8px;
+    padding:10px 12px; display:flex; justify-content:space-between; align-items:center;
+  }
+  .state-key   { font-family:var(--mono); font-size:10px; color:var(--muted); }
+  .state-val   { font-family:var(--mono); font-size:12px; font-weight:700; }
+
+  /* ── right panel: task + log ── */
+  .right-col { display:flex; flex-direction:column; gap:16px; }
+
+  /* ── task selector ── */
+  .task-tabs { display:flex; gap:6px; margin-bottom:16px; }
+  .task-tab {
+    flex:1; padding:8px 6px; border-radius:8px;
+    border:1px solid var(--border); background:transparent;
+    cursor:pointer; color:var(--muted); font-family:var(--mono);
+    font-size:10px; text-align:center; transition:.2s;
+  }
+  .task-tab:hover  { color:var(--text); border-color:var(--blue); }
+  .task-tab.active { background:rgba(74,158,255,.15); color:var(--blue); border-color:var(--blue); }
+  .task-tab .diff  { display:block; font-size:9px; margin-top:2px; }
+
+  /* ── reward bar ── */
+  .reward-row { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .reward-bar-wrap { flex:1; height:6px; background:rgba(255,255,255,.08); border-radius:3px; overflow:hidden; }
+  .reward-bar-fill { height:100%; border-radius:3px; transition:width .5s ease; }
+  .reward-label { font-family:var(--mono); font-size:11px; min-width:48px; text-align:right; }
+
+  /* ── log ── */
+  .log-list { max-height:220px; overflow-y:auto; }
+  .log-list::-webkit-scrollbar { width:4px; }
+  .log-list::-webkit-scrollbar-track { background:transparent; }
+  .log-list::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+  .log-entry {
+    display:flex; gap:8px; align-items:flex-start;
+    padding:7px 0; border-bottom:1px solid rgba(255,255,255,.04);
+    font-family:var(--mono); font-size:11px;
+    animation: fadeIn .3s ease;
+  }
+  @keyframes fadeIn { from{opacity:0;transform:translateX(-6px)} to{opacity:1;transform:none} }
+  .log-step  { color:var(--muted); min-width:36px; }
+  .log-action{ font-weight:700; min-width:54px; }
+  .log-detail{ color:var(--muted); flex:1; }
+  .log-reward{ min-width:52px; text-align:right; }
+
+  /* ── bottom row ── */
+  .bottom-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+
+  /* ── price chart ── */
+  .chart-wrap { position:relative; height:120px; }
+  canvas { width:100% !important; }
+
+  /* ── score display ── */
+  .score-bars { display:flex; flex-direction:column; gap:12px; }
+  .score-row  { display:flex; align-items:center; gap:12px; }
+  .score-name { font-family:var(--mono); font-size:10px; color:var(--muted); min-width:100px; }
+  .score-bar-wrap { flex:1; height:8px; background:rgba(255,255,255,.06); border-radius:4px; overflow:hidden; }
+  .score-bar-fill { height:100%; border-radius:4px; transition:width 1s ease; }
+  .score-val  { font-family:var(--mono); font-size:11px; font-weight:700; min-width:36px; text-align:right; }
+
+  /* ── run button ── */
+  .run-btn {
+    width:100%; padding:14px; border-radius:10px; border:none;
+    background: linear-gradient(135deg, #f5a623, #ff6b35);
+    color:#000; font-family:var(--sans); font-size:14px; font-weight:800;
+    cursor:pointer; transition:.2s; letter-spacing:.5px;
+    margin-top:12px;
+  }
+  .run-btn:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(245,166,35,.3); }
+  .run-btn:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+
+  /* ── weather badge ── */
+  .weather-badge {
+    display:inline-flex; align-items:center; gap:6px;
+    padding:4px 10px; border-radius:20px;
+    font-family:var(--mono); font-size:10px;
+    background:rgba(255,255,255,.06); border:1px solid var(--border);
+  }
+
+  /* ── toast ── */
+  #toast {
+    position:fixed; bottom:24px; right:24px;
+    background:var(--panel); border:1px solid var(--green);
+    color:var(--green); padding:12px 20px; border-radius:10px;
+    font-family:var(--mono); font-size:12px;
+    transform:translateY(80px); opacity:0; transition:.3s; z-index:100;
+  }
+  #toast.show { transform:none; opacity:1; }
+
+  /* ── step controls ── */
+  .step-controls { display:flex; gap:8px; align-items:center; }
+  .speed-btn {
+    padding:6px 12px; border-radius:6px; border:1px solid var(--border);
+    background:transparent; color:var(--muted); font-family:var(--mono);
+    font-size:10px; cursor:pointer; transition:.2s;
+  }
+  .speed-btn.active,
+  .speed-btn:hover { border-color:var(--blue); color:var(--blue); }
+
+  @media(max-width:900px){
+    .metrics { grid-template-columns:repeat(2,1fr); }
+    .main-grid { grid-template-columns:1fr; }
+    .bottom-grid { grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">⚡</div>
+      <div class="logo-text">
+        <h1>Smart Grid Energy Trader</h1>
+        <p>OpenEnv · Hackathon Demo · v1.0.0</p>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <div class="weather-badge" id="weatherBadge">☀️ sunny</div>
+      <div class="status-pill">
+        <div class="dot" id="statusDot"></div>
+        <span id="statusText">connecting...</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Metric cards -->
+  <div class="metrics">
+    <div class="metric">
+      <div class="metric-label">Battery Level</div>
+      <div class="metric-value amber" id="mBattery">50.0<span style="font-size:16px">%</span></div>
+      <div class="metric-sub" id="mBatteryBar">████████░░ 50%</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Grid Price</div>
+      <div class="metric-value blue" id="mPrice">—</div>
+      <div class="metric-sub" id="mPriceLabel">Rs / kWh</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Generation</div>
+      <div class="metric-value green" id="mGen">—</div>
+      <div class="metric-sub" id="mGenLabel">solar + wind kWh</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Total Revenue</div>
+      <div class="metric-value purple" id="mRevenue">Rs 0</div>
+      <div class="metric-sub" id="mStep">step 0 / 0</div>
+    </div>
+  </div>
+
+  <!-- Main grid -->
+  <div class="main-grid">
+
+    <!-- Left: environment control -->
+    <div class="panel">
+      <div class="panel-title">Environment Control</div>
+
+      <!-- Battery SVG -->
+      <div class="battery-wrap">
+        <svg class="battery-svg" width="80" height="120" viewBox="0 0 80 120">
+          <rect x="25" y="4" width="30" height="8" rx="3" fill="#1e2d4a"/>
+          <rect x="6" y="12" width="68" height="104" rx="8" fill="none" stroke="#1e2d4a" stroke-width="2"/>
+          <rect id="battFill" x="10" y="16" width="60" height="96" rx="6" fill="#f5a623"
+                transform="translate(0,0) scale(1,0)" style="transform-origin:bottom center; transition:transform .6s ease"/>
+          <text x="40" y="72" text-anchor="middle" font-family="Space Mono" font-size="14"
+                font-weight="700" fill="white" id="battText">50%</text>
+        </svg>
+        <div class="battery-info">
+          <div class="battery-pct amber" id="battPct">50.0%</div>
+          <div class="battery-label">battery charged</div>
+          <div style="margin-top:12px; display:flex; flex-direction:column; gap:6px;">
+            <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;">
+              <span style="color:var(--muted)">Home demand</span>
+              <span id="demandVal" class="green">—</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;">
+              <span style="color:var(--muted)">Hour / Day</span>
+              <span id="timeVal" class="blue">Hr00 · Day1</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="actions">
+        <button class="action-btn store" onclick="takeAction(0)">
+          <div class="btn-icon">🔋</div>
+          <div class="btn-name" style="color:#3b82f6">STORE</div>
+          <div class="btn-desc">charge battery</div>
+        </button>
+        <button class="action-btn dist" onclick="takeAction(1)">
+          <div class="btn-icon">🏘️</div>
+          <div class="btn-name" style="color:var(--green)">DISTRIBUTE</div>
+          <div class="btn-desc">power homes</div>
+        </button>
+        <button class="action-btn sell" onclick="takeAction(2)">
+          <div class="btn-icon">💰</div>
+          <div class="btn-name" style="color:var(--amber)">SELL</div>
+          <div class="btn-desc">sell to grid</div>
+        </button>
+      </div>
+
+      <!-- State display -->
+      <div class="panel-title" style="margin-top:4px">Current State</div>
+      <div class="state-grid" id="stateGrid">
+        <div class="state-row"><span class="state-key">solar_output</span><span class="state-val amber" id="sSolar">—</span></div>
+        <div class="state-row"><span class="state-key">wind_output</span><span class="state-val blue"  id="sWind">—</span></div>
+        <div class="state-row"><span class="state-key">grid_price</span><span class="state-val green" id="sPrice">—</span></div>
+        <div class="state-row"><span class="state-key">home_demand</span><span class="state-val red"  id="sDemand">—</span></div>
+        <div class="state-row"><span class="state-key">battery_level</span><span class="state-val amber" id="sBattery">—</span></div>
+        <div class="state-row"><span class="state-key">weather</span><span class="state-val purple" id="sWeather">—</span></div>
+      </div>
+
+      <button class="run-btn" id="runBtn" onclick="runAgent()" style="margin-top:16px">
+        ▶ Run AI Agent (All 3 Tasks)
+      </button>
+    </div>
+
+    <!-- Right col -->
+    <div class="right-col">
+
+      <!-- Task selector -->
+      <div class="panel">
+        <div class="panel-title">Task Selection</div>
+        <div class="task-tabs">
+          <button class="task-tab active" onclick="selectTask(1,this)">
+            Task 1<span class="diff" style="color:var(--green)">easy</span>
+          </button>
+          <button class="task-tab" onclick="selectTask(2,this)">
+            Task 2<span class="diff" style="color:var(--amber)">medium</span>
+          </button>
+          <button class="task-tab" onclick="selectTask(3,this)">
+            Task 3<span class="diff" style="color:var(--red)">hard</span>
+          </button>
+        </div>
+        <div id="taskDesc" style="font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.7">
+          Make ONE decision. If price ≥ 8 → SELL. If price &lt; 5 → STORE. Otherwise DISTRIBUTE.
+        </div>
+        <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+          <button class="speed-btn active" onclick="setSpeed(300,this)">1x</button>
+          <button class="speed-btn" onclick="setSpeed(100,this)">3x</button>
+          <button class="speed-btn" onclick="setSpeed(30,this)">10x</button>
+          <button style="margin-left:auto;padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text);font-family:var(--mono);font-size:10px;cursor:pointer;" onclick="resetEnv()">↺ Reset</button>
+        </div>
+      </div>
+
+      <!-- Reward tracker -->
+      <div class="panel">
+        <div class="panel-title">Reward Breakdown</div>
+        <div class="reward-row">
+          <span style="font-family:var(--mono);font-size:10px;color:var(--muted);min-width:60px">Revenue</span>
+          <div class="reward-bar-wrap"><div class="reward-bar-fill" id="rRevenue" style="width:0%;background:var(--amber)"></div></div>
+          <span class="reward-label amber" id="rRevenueVal">0</span>
+        </div>
+        <div class="reward-row">
+          <span style="font-family:var(--mono);font-size:10px;color:var(--muted);min-width:60px">Shortage</span>
+          <div class="reward-bar-wrap"><div class="reward-bar-fill" id="rShortage" style="width:0%;background:var(--red)"></div></div>
+          <span class="reward-label red" id="rShortageVal">0</span>
+        </div>
+        <div class="reward-row">
+          <span style="font-family:var(--mono);font-size:10px;color:var(--muted);min-width:60px">Waste</span>
+          <div class="reward-bar-wrap"><div class="reward-bar-fill" id="rWaste" style="width:0%;background:var(--purple)"></div></div>
+          <span class="reward-label purple" id="rWasteVal">0</span>
+        </div>
+      </div>
+
+      <!-- Step log -->
+      <div class="panel" style="flex:1">
+        <div class="panel-title">Step Log</div>
+        <div class="log-list" id="logList">
+          <div style="font-family:var(--mono);font-size:11px;color:var(--muted);text-align:center;padding:20px 0">
+            Press an action or run the agent to start
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom row -->
+  <div class="bottom-grid">
+
+    <!-- Price chart -->
+    <div class="panel">
+      <div class="panel-title">24-Hour Price Curve</div>
+      <div class="chart-wrap">
+        <canvas id="priceChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Scores -->
+    <div class="panel">
+      <div class="panel-title">Task Scores</div>
+      <div class="score-bars" id="scoreBars">
+        <div class="score-row">
+          <span class="score-name">Task 1 · Easy</span>
+          <div class="score-bar-wrap"><div class="score-bar-fill" id="s1bar" style="width:0%;background:var(--green)"></div></div>
+          <span class="score-val green" id="s1val">—</span>
+        </div>
+        <div class="score-row">
+          <span class="score-name">Task 2 · Medium</span>
+          <div class="score-bar-wrap"><div class="score-bar-fill" id="s2bar" style="width:0%;background:var(--amber)"></div></div>
+          <span class="score-val amber" id="s2val">—</span>
+        </div>
+        <div class="score-row">
+          <span class="score-name">Task 3 · Hard</span>
+          <div class="score-bar-wrap"><div class="score-bar-fill" id="s3bar" style="width:0%;background:var(--blue)"></div></div>
+          <span class="score-val blue" id="s3val">—</span>
+        </div>
+        <div class="score-row" style="margin-top:6px;border-top:1px solid var(--border);padding-top:12px">
+          <span class="score-name" style="color:var(--text)">Average</span>
+          <div class="score-bar-wrap"><div class="score-bar-fill" id="savgbar" style="width:0%;background:var(--purple)"></div></div>
+          <span class="score-val purple" id="savgval">—</span>
+        </div>
+      </div>
+      <div id="agentStatus" style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:14px;text-align:center">
+        Click "Run AI Agent" to see scores
+      </div>
+    </div>
+  </div>
+
+</div><!-- /wrap -->
+
+<div id="toast">✓ Action taken</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+// ── Config ──────────────────────────────────────────────────────────
+const API = '';   // empty = same origin (your FastAPI server)
+let currentTask = 1;
+let stepSpeed   = 300;
+let isRunning   = false;
+let totalRevenue  = 0;
+let totalShortage = 0;
+let totalWaste    = 0;
+let stepCount     = 0;
+
+const TASK_DESCS = {
+  1: "Make ONE decision. If price ≥ 8 → SELL. If price < 5 → STORE. Otherwise DISTRIBUTE.",
+  2: "Manage the grid for 24 hours. Price peaks 17:00–20:00 (12 Rs/kWh). Solar only 06:00–18:00. Strategy: store cheap, sell peak, distribute when demand is high.",
+  3: "7-day simulation. Days 4–5 are STORMY (zero solar). Pre-fill battery by Day 3. Day 6 has 2.5x price spike — sell aggressively. Survival + revenue = winning score."
+};
+
+// ── Price chart ──────────────────────────────────────────────────────
+const hours  = Array.from({length:24},(_,i)=>i);
+const prices = hours.map(h => {
+  if(h<6)  return 3 + Math.random()*.5;
+  if(h<10) return 6 + Math.random()*.5;
+  if(h<17) return 5 + Math.random()*.5;
+  if(h<21) return 12 + Math.random()*.5;
+  return 7 + Math.random()*.5;
+});
+
+const ctx = document.getElementById('priceChart').getContext('2d');
+const priceChart = new Chart(ctx, {
+  type:'line',
+  data:{
+    labels: hours.map(h=>h+':00'),
+    datasets:[{
+      label:'Grid Price (Rs/kWh)',
+      data: prices,
+      borderColor:'#f5a623',
+      backgroundColor:'rgba(245,166,35,.08)',
+      borderWidth:2,
+      pointRadius:2,
+      fill:true,
+      tension:.4,
+    }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:false} },
+    scales:{
+      x:{ ticks:{color:'#4a5568', font:{family:'Space Mono',size:9}, maxTicksLimit:8},
+          grid:{color:'rgba(255,255,255,.04)'} },
+      y:{ ticks:{color:'#4a5568', font:{family:'Space Mono',size:9}},
+          grid:{color:'rgba(255,255,255,.04)'} }
+    }
+  }
+});
+
+// ── API helpers ──────────────────────────────────────────────────────
+async function apiPost(path, body={}) {
+  try {
+    const r = await fetch(API+path, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    return await r.json();
+  } catch(e) {
+    return null;
+  }
+}
+
+async function apiGet(path) {
+  try {
+    const r = await fetch(API+path);
+    return await r.json();
+  } catch(e) {
+    return null;
+  }
+}
+
+// ── Connection check ─────────────────────────────────────────────────
+async function checkHealth() {
+  const data = await apiGet('/health');
+  const dot  = document.getElementById('statusDot');
+  const txt  = document.getElementById('statusText');
+  if(data && data.status === 'ok') {
+    dot.className = 'dot live';
+    txt.textContent = 'live · connected';
+    await resetEnv();
+  } else {
+    dot.className = 'dot';
+    txt.textContent = 'server offline';
+  }
+}
+
+// ── Update UI from state ─────────────────────────────────────────────
+function updateUI(state, info={}) {
+  if(!state) return;
+
+  // metrics
+  const bat = state.battery_level ?? 50;
+  document.getElementById('mBattery').innerHTML = bat.toFixed(1)+'<span style="font-size:16px">%</span>';
+  document.getElementById('mPrice').textContent  = (state.grid_price ?? 0).toFixed(2);
+  const gen = ((state.solar_output??0)+(state.wind_output??0)).toFixed(1);
+  document.getElementById('mGen').textContent    = gen;
+  document.getElementById('mGenLabel').textContent = `${(state.solar_output??0).toFixed(1)} solar + ${(state.wind_output??0).toFixed(1)} wind`;
+  document.getElementById('mRevenue').textContent  = 'Rs '+totalRevenue.toFixed(0);
+  document.getElementById('mStep').textContent     = `step ${stepCount} / ${[0,1,24,168][currentTask]}`;
+
+  // battery visual
+  const pct = bat/100;
+  const battFill = document.getElementById('battFill');
+  battFill.setAttribute('transform', `translate(0,${96*(1-pct)}) scale(1,${pct})`);
+  battFill.setAttribute('y', 16 + 96*(1-pct));
+  battFill.setAttribute('height', 96*pct);
+  const col = bat>60?'#00e5a0':bat>30?'#f5a623':'#ff4757';
+  battFill.setAttribute('fill', col);
+  document.getElementById('battText').textContent = bat.toFixed(0)+'%';
+  document.getElementById('battPct').textContent  = bat.toFixed(1)+'%';
+  document.getElementById('battPct').style.color  = col;
+
+  // state rows
+  document.getElementById('sSolar').textContent   = (state.solar_output??0).toFixed(2)+' kWh';
+  document.getElementById('sWind').textContent    = (state.wind_output??0).toFixed(2)+' kWh';
+  document.getElementById('sPrice').textContent   = 'Rs '+(state.grid_price??0).toFixed(2);
+  document.getElementById('sDemand').textContent  = (state.home_demand??0).toFixed(2)+' kWh';
+  document.getElementById('sBattery').textContent = bat.toFixed(1)+'%';
+  document.getElementById('sWeather').textContent = state.weather??'—';
+  document.getElementById('demandVal').textContent= (state.home_demand??0).toFixed(2)+' kWh';
+  document.getElementById('timeVal').textContent  = `Hr${String(state.hour_of_day??0).padStart(2,'0')} · Day${state.day??1}`;
+
+  // weather badge
+  const wicons = {sunny:'☀️',cloudy:'🌤️',stormy:'⛈️'};
+  document.getElementById('weatherBadge').textContent =
+    (wicons[state.weather]||'🌡️')+' '+(state.weather||'—');
+
+  // reward bars
+  const maxRev  = 1000;
+  const maxShort= 50;
+  document.getElementById('rRevenue').style.width   = Math.min(100, totalRevenue/maxRev*100)+'%';
+  document.getElementById('rShortage').style.width  = Math.min(100, totalShortage/maxShort*100)+'%';
+  document.getElementById('rWaste').style.width     = Math.min(100, totalWaste/10*100)+'%';
+  document.getElementById('rRevenueVal').textContent  = totalRevenue.toFixed(0);
+  document.getElementById('rShortageVal').textContent = totalShortage.toFixed(1);
+  document.getElementById('rWasteVal').textContent    = totalWaste.toFixed(1);
+}
+
+// ── Add log entry ────────────────────────────────────────────────────
+function addLog(step, action, reward, battery) {
+  const list = document.getElementById('logList');
+  if(step === 1) list.innerHTML = '';
+
+  const colors = {STORE:'#3b82f6', DISTRIBUTE:'#00e5a0', SELL:'#f5a623'};
+  const el = document.createElement('div');
+  el.className = 'log-entry';
+  el.innerHTML = `
+    <span class="log-step">#${String(step).padStart(3,'0')}</span>
+    <span class="log-action" style="color:${colors[action]||'#fff'}">${action}</span>
+    <span class="log-detail">bat ${battery?.toFixed(1)}%</span>
+    <span class="log-reward" style="color:${reward>=0?'#00e5a0':'#ff4757'}">${reward>=0?'+':''}${reward?.toFixed(3)}</span>
+  `;
+  list.prepend(el);
+  // keep max 50 entries
+  while(list.children.length > 50) list.removeChild(list.lastChild);
+}
+
+// ── Manual action ────────────────────────────────────────────────────
+async function takeAction(action) {
+  if(isRunning) return;
+  const names = ['STORE','DISTRIBUTE','SELL'];
+  const result = await apiPost('/step', {task_id: currentTask, action});
+  if(!result) { showToast('⚠ Server offline'); return; }
+
+  stepCount++;
+  const info = result.info || {};
+  if(result.reward > 0 && names[action]==='SELL')
+    totalRevenue += (info.revenue_rs || 0);
+  if(info.shortage_kwh) totalShortage += info.shortage_kwh;
+
+  updateUI(result.observation, info);
+  addLog(stepCount, names[action], result.reward, info.battery_level);
+
+  // highlight active button
+  ['store','dist','sell'].forEach((c,i)=>{
+    document.querySelectorAll('.action-btn')[i].className =
+      `action-btn ${c}` + (i===action ? ` active-${c}` : '');
+  });
+
+  showToast(`${names[action]} → reward ${result.reward>=0?'+':''}${result.reward?.toFixed(3)}`);
+
+  if(result.done) showToast('✓ Episode complete!');
+}
+
+// ── Run full AI agent (rule-based sim) ───────────────────────────────
+async function runAgent() {
+  if(isRunning) return;
+  isRunning = true;
+  document.getElementById('runBtn').disabled = true;
+  document.getElementById('runBtn').textContent = '⏳ Running...';
+  document.getElementById('agentStatus').textContent = 'Agent running...';
+
+  const scores = [];
+
+  for(let tid=1; tid<=3; tid++) {
+    // reset for this task
+    totalRevenue=0; totalShortage=0; totalWaste=0; stepCount=0;
+    await apiPost('/reset', {task_id:tid, seed:42});
+    const maxSteps = [0,1,24,168][tid];
+
+    for(let s=0; s<maxSteps; s++) {
+      const stateData = await apiGet(`/state?task_id=${tid}`);
+      if(!stateData) break;
+
+      // rule-based agent logic
+      const action = ruleAgent(stateData);
+      const result = await apiPost('/step', {task_id:tid, action});
+      if(!result) break;
+
+      stepCount++;
+      const info = result.info||{};
+      if(action===2) totalRevenue += (stateData.grid_price||0)*(stateData.solar_output+stateData.wind_output||0);
+      if(info.shortage_kwh) totalShortage += parseFloat(info.shortage_kwh)||0;
+
+      updateUI(result.observation, info);
+      addLog(stepCount, ['STORE','DISTRIBUTE','SELL'][action], result.reward, info.battery_level);
+
+      if(result.done) break;
+      await delay(stepSpeed);
+    }
+
+    // fetch score via grade
+    const gradeResult = await apiPost('/grade', {
+      task_id: tid,
+      actions: buildActions(tid)
+    });
+    const sc = gradeResult?.score ?? 0;
+    scores.push(sc);
+
+    // update score bar
+    document.getElementById(`s${tid}bar`).style.width = (sc*100)+'%';
+    document.getElementById(`s${tid}val`).textContent  = sc.toFixed(3);
+    await delay(400);
+  }
+
+  // average
+  const avg = scores.reduce((a,b)=>a+b,0)/scores.length;
+  document.getElementById('savgbar').style.width = (avg*100)+'%';
+  document.getElementById('savgval').textContent  = avg.toFixed(3);
+  document.getElementById('agentStatus').textContent = `✓ Done · Average: ${avg.toFixed(3)}`;
+
+  document.getElementById('runBtn').disabled = false;
+  document.getElementById('runBtn').textContent = '▶ Run AI Agent (All 3 Tasks)';
+  isRunning = false;
+  showToast('✓ All tasks complete!');
+}
+
+// ── Rule-based agent (mirrors inference.py fallback) ─────────────────
+function ruleAgent(state) {
+  const {grid_price:p=5, battery_level:bat=50,
+         home_demand:dem=7, solar_output:sol=0,
+         wind_output:win=0, weather:w='sunny', day:d=1} = state;
+  const gen = sol+win;
+  if(d===3 && bat<80)           return 0;  // pre-charge
+  if(d===6 && p>=10)            return 2;  // spike day
+  if(p>=10 && bat>30)           return 2;  // sell peak
+  if(dem>gen && bat>20)         return 1;  // serve homes
+  if(bat<20)                    return 1;  // low battery
+  if(w==='stormy')              return 1;  // storm
+  return 0;                                // default store
+}
+
+// ── Build full action list for grader ────────────────────────────────
+function buildActions(tid) {
+  const n = [0,1,24,168][tid];
+  const actions = [];
+  // simulate deterministically
+  const env = {battery:50, day:1, hour:0};
+  for(let i=0;i<n;i++) {
+    const price = getPriceAt(env.hour, env.day, tid);
+    const solar = getSolarAt(env.hour);
+    const state = {grid_price:price,battery_level:env.battery,
+                   home_demand:8,solar_output:solar,
+                   wind_output:3,weather:getWeather(env.day,tid),day:env.day};
+    actions.push(ruleAgent(state));
+    env.hour++;
+    if(env.hour>=24){env.hour=0;env.day++;}
+  }
+  return actions;
+}
+
+function getPriceAt(h,d,tid) {
+  let p = h<6?3:h<10?6:h<17?5:h<21?12:7;
+  if(tid===3&&d===6) p*=2.5;
+  return p;
+}
+function getSolarAt(h) {
+  return (h>=6&&h<=18)?Math.max(0,Math.sin(Math.PI*(h-6)/12)*15):0;
+}
+function getWeather(d,tid) {
+  if(tid===3&&(d===4||d===5)) return 'stormy';
+  if(tid===3&&d===3) return 'cloudy';
+  return 'sunny';
+}
+
+// ── Task selector ────────────────────────────────────────────────────
+async function selectTask(id, btn) {
+  currentTask = id;
+  document.querySelectorAll('.task-tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('taskDesc').textContent = TASK_DESCS[id];
+  totalRevenue=0; totalShortage=0; totalWaste=0; stepCount=0;
+  await apiPost('/reset', {task_id:id, seed:42});
+  const state = await apiGet(`/state?task_id=${id}`);
+  if(state) updateUI(state);
+  document.getElementById('logList').innerHTML =
+    '<div style="font-family:var(--mono);font-size:11px;color:var(--muted);text-align:center;padding:20px 0">Task reset — ready</div>';
+}
+
+async function resetEnv() {
+  totalRevenue=0; totalShortage=0; totalWaste=0; stepCount=0;
+  await apiPost('/reset', {task_id:currentTask, seed:42});
+  const state = await apiGet(`/state?task_id=${currentTask}`);
+  if(state) updateUI(state);
+}
+
+function setSpeed(ms, btn) {
+  stepSpeed = ms;
+  document.querySelectorAll('.speed-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ── Toast ────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2500);
+}
+
+function delay(ms) { return new Promise(r=>setTimeout(r,ms)); }
+
+// ── Init ─────────────────────────────────────────────────────────────
+checkHealth();
+</script>
+</body>
+</html>
