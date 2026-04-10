@@ -1,0 +1,74 @@
+Metadata-Version: 2.4
+Name: smartgrid-openenv
+Version: 1.0.0
+Summary: Smart Grid Energy Trader — OpenEnv environment for renewable energy microgrid management
+License: MIT
+Keywords: reinforcement-learning,openenv,energy,smart-grid,ai-agent,hackathon
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: fastapi<1.0.0,>=0.104.0
+Requires-Dist: uvicorn<1.0.0,>=0.24.0
+Requires-Dist: pydantic<3.0.0,>=2.0.0
+Requires-Dist: openai<2.0.0,>=1.0.0
+Requires-Dist: aiofiles>=23.0.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.4.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.21.0; extra == "dev"
+Requires-Dist: httpx>=0.25.0; extra == "dev"
+Requires-Dist: black>=23.0.0; extra == "dev"
+Requires-Dist: ruff>=0.1.0; extra == "dev"
+Requires-Dist: mypy>=1.5.0; extra == "dev"
+Provides-Extra: dataset
+Requires-Dist: pandas>=2.0.0; extra == "dataset"
+Requires-Dist: matplotlib>=3.7.0; extra == "dataset"
+Requires-Dist: numpy>=1.24.0; extra == "dataset"
+Provides-Extra: all
+Requires-Dist: smartgrid-openenv[dev]; extra == "all"
+Requires-Dist: smartgrid-openenv[dataset]; extra == "all"
+
+---
+title: Smartgrid Openenv
+emoji: ⚡
+colorFrom: green
+colorTo: blue
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
+# Smart Grid Energy Trader — OpenEnv
+
+AI agent environment for renewable energy microgrid management.
+
+## The Problem
+
+A village microgrid runs on solar panels + a wind turbine.
+Every hour the agent picks one action:
+
+| Action | Code | What happens |
+|--------|------|-------------|
+| STORE | 0 | Charge the battery for later |
+| DISTRIBUTE | 1 | Send power directly to homes |
+| SELL | 2 | Sell to the city grid for money |
+
+## Tasks
+
+| # | Name | Difficulty | Steps |
+|---|------|-----------|-------|
+| 1 | Single Decision | Easy | 1 |
+| 2 | 24-Hour Day Manager | Medium | 24 |
+| 3 | 7-Day Storm Survival | Hard | 168 |
+
+## State (what the agent sees)
+
+```json
+{
+  "battery_level": 65.0,
+  "solar_output":  12.4,
+  "wind_output":    3.1,
+  "grid_price":     8.5,
+  "home_demand":    9.0,
+  "hour_of_day":   14,
+  "day":            2,
+  "weather":      "sunny"
+}
