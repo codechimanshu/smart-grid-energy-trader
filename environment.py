@@ -147,32 +147,34 @@ class SmartGridEnv:
         }
 
     def score(self):
-        """Returns 0.0–1.0 after episode ends."""
+        """Returns bounds-clamped score strictly between 0 and 1 after episode ends."""
         if not self.done:
-            return 0.0
+            return 0.001
 
+        raw = 0.001
         if self.task_id == 1:
-            if not self._history:
-                return 0.0
-            act = self._history[-1]["action"]
-            p   = self._price(0, 1)
-            if p >= 8.0 and act == "SELL":        return 1.0
-            if p < 5.0  and act == "STORE":       return 1.0
-            if act == "DISTRIBUTE":               return 0.5
-            return 0.2
+            if self._history:
+                act = self._history[-1]["action"]
+                p   = self._price(0, 1)
+                if p >= 8.0 and act == "SELL":        raw = 0.999
+                elif p < 5.0  and act == "STORE":     raw = 0.999
+                elif act == "DISTRIBUTE":             raw = 0.5
+                else:                                 raw = 0.2
 
         elif self.task_id == 2:
             max_rev = 24 * 15.0 * 12.0 * 0.3
             rev_s   = min(1.0, self.total_revenue / max_rev)
             short_s = min(1.0, self.total_shortage / 50.0)
-            return round(max(0.0, rev_s - short_s * 0.5), 3)
+            raw = round(max(0.0, rev_s - short_s * 0.5), 3)
 
         else:   # task 3
             survived = 1.0 if self.total_shortage < 10.0 \
                        else max(0.0, 1 - self.total_shortage / 100)
             rev_s    = min(1.0, self.total_revenue / 5000.0)
             waste_s  = 1.0 - min(1.0, self.total_waste / 20.0)
-            return round(survived * 0.4 + rev_s * 0.4 + waste_s * 0.2, 3)
+            raw = round(survived * 0.4 + rev_s * 0.4 + waste_s * 0.2, 3)
+
+        return max(0.001, min(0.999, float(raw)))
 
     # ── internals ────────────────────────────────────────────────────
 
