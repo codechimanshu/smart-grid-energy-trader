@@ -1,0 +1,28 @@
+{
+  "name": "smart-grid-energy-trader-dataset",
+  "description": "Training and evaluation dataset for the Smart Grid Energy Trader OpenEnv environment.",
+  "version": "1.0.0",
+  "files": {
+    "states.csv": "All possible environment states across all tasks",
+    "episodes.csv": "Full episode rollouts with rule-based and optimal agent decisions",
+    "price_patterns.csv": "24-hour price curves for 4 market scenarios",
+    "llm_prompts.jsonl": "500 LLM training examples in OpenAI chat format"
+  },
+  "stats": {
+    "states_rows": 216,
+    "episodes_rows": 3860,
+    "price_pattern_rows": 96,
+    "llm_examples": 500
+  },
+  "tasks": [
+    "Single Decision (easy)",
+    "24-Hour Day Manager (medium)",
+    "7-Day Storm Survival (hard)"
+  ],
+  "actions": {
+    "0": "STORE",
+    "1": "DISTRIBUTE",
+    "2": "SELL"
+  },
+  "license": "MIT"
+}
